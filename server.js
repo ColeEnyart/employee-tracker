@@ -1,12 +1,12 @@
-const mysql = require("mysql12");
+const mysql = require("mysql2");
 const inquirer = require("inquirer");
 const table = require("console.table");
 
-const db = mysql.creatConnection(
+const db = mysql.createConnection(
     {
         host: 'localhost',
         user: 'root',
-        password: '',
+        password: '6642',
         database: 'employee_db'
     },
     console.log(`Connected to the database.`)
@@ -31,7 +31,59 @@ const initQuestions = () => {
             ]
         }
     ])
+    .then((res) => {
+        switch (res.options) {
+            case 'View All Employees':
+                viewEmployees();
+                break;
+            case 'Add Employee':
+                
+                break;
+            case 'Update Employee Role':
+                
+                break;
+            case 'View All Roles':
+                viewRoles();
+                break;
+            case 'Add Role':
+                
+                break;
+            case 'View All Departments':
+                viewDepartments();
+                break;
+            case 'Add Department':
+                
+                break;
+            case 'Quit':
 
+                break;
+        }
+    })
+
+}
+
+const viewEmployees = () => {
+    db.query("SELECT employee.first_name, employee.last_name, role.title, department.name AS department, role.salary, CONCAT(e.first_name, ' ' ,e.last_name) AS Manager FROM employee INNER JOIN role on role.id = employee.role_id INNER JOIN department on department.id = role.department_id LEFT JOIN employee e on employee.manager_id = e.id;", (err, res) => {
+        if(err) throw err;
+        console.table(res);
+        initQuestions();
+    })
+}
+
+const viewRoles = () => {
+    db.query("SELECT role.id, title, name AS Department, salary FROM role JOIN department ON role.department_id = department.id;", (err, res) => {
+        if(err) throw err;
+        console.table(res);
+        initQuestions();
+    })
+}
+
+const viewDepartments = () => {
+    db.query("SELECT * FROM department;", (err, res) => {
+        if(err) throw err;
+        console.table(res);
+        initQuestions();
+    })
 }
 
 initQuestions();
