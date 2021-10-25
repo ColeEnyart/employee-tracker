@@ -20,21 +20,33 @@ const initQuestions = () => {
             name: 'options',
             message: 'What would you like to do?',
             choices: [
+                'View All Departments',
+                'View All Roles',
                 'View All Employees',
+                'Add Department',
+                'Add Role',
                 'Add Employee',
                 'Update Employee Role',
-                'View All Roles',
-                'Add Role',
-                'View All Departments',
-                'Add Department',
                 'Quit'
             ]
         }
     ])
     .then((res) => {
         switch (res.options) {
+            case 'View All Departments':
+                viewDepartments();
+                break;
+            case 'View All Roles':
+                viewRoles();
+                break;
             case 'View All Employees':
                 viewEmployees();
+                break;
+            case 'Add Department':
+                
+                break;
+            case 'Add Role':
+                
                 break;
             case 'Add Employee':
                 
@@ -42,21 +54,8 @@ const initQuestions = () => {
             case 'Update Employee Role':
                 
                 break;
-            case 'View All Roles':
-                viewRoles();
-                break;
-            case 'Add Role':
-                
-                break;
-            case 'View All Departments':
-                viewDepartments();
-                break;
-            case 'Add Department':
-                
-                break;
             case 'Quit':
-
-                break;
+                process.exit();
         }
     })
 
