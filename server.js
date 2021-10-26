@@ -65,6 +65,7 @@ const deleteDepartment = () => {
         for (var i = 0; i < res.length; i++) {
             depOpt.push(Object(res[i]));
         }
+        console.table(res);
 
         inquirer.prompt(
             {
