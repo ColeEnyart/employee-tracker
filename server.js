@@ -2,6 +2,7 @@ const mysql = require("mysql2");
 const env = require('dotenv').config();
 const inquirer = require("inquirer");
 require("console.table");
+const proc = require("./procs");
 
 const db = mysql.createConnection(
     {
@@ -14,33 +15,36 @@ const db = mysql.createConnection(
     console.log(`Connected to the database.`)
 );
 
-
-
-const viewEmployees = () => {
-    db.query("SELECT employee.first_name, employee.last_name, role.title, department.name AS department, role.salary, CONCAT(e.first_name, ' ' ,e.last_name) AS Manager FROM employee INNER JOIN role on role.id = employee.role_id INNER JOIN department on department.id = role.department_id LEFT JOIN employee e on employee.manager_id = e.id;", (err, res) => {
-        if (err) throw err;
-        console.table(res);
-        initQuestions();
-    })
+function viewDepartments() {
+    proc.getDepartments()
+        .then((res) => {
+            console.table(res.sort((a, b) => {
+                return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+            }));
+            init();
+        })
+        .catch((err) => { throw err })
 }
 
-const viewRoles = () => {
-    db.query("SELECT role.id, title, name AS Department, salary FROM role JOIN department ON role.department_id = department.id;", (err, res) => {
-        if (err) throw err;
-        console.table(res);
-        initQuestions();
-    })
+function viewRoles() {
+    proc.getRoles()
+        .then((res) => {
+            console.table(res);
+            init();
+        })
+        .catch((err) => { throw err })
 }
 
-const viewDepartments = () => {
-    db.query("SELECT * FROM department;", (err, res) => {
-        if (err) throw err;
-        console.table(res);
-        initQuestions();
-    })
+function viewEmployees() {
+    proc.getEmployees()
+        .then((res) => {
+            console.table(res);
+            init();
+        })
+        .catch((err) => { throw err })
 }
 
-const addDepartment = () => {
+function addDepartment() {
     inquirer.prompt(
         {
             type: 'input',
@@ -48,18 +52,152 @@ const addDepartment = () => {
             message: 'What is the name of the department? ',
         })
         .then((res) => {
-            db.query('INSERT INTO department SET ?', {
-                name: res.addDep
+            proc.addDepartment(res.addDep);
+            console.log('Added ' + res.addDep + ' to the database');
+            init();
+        })
+        .catch((err) => { throw (err) });
+}
+
+function addRole() {
+    let dep = [];
+
+    proc.getDepartments()
+        .then((res) => {
+            for (let i = 0; i < res.length; i++) {
+                dep.push({ name: res[i].name, value: res[i].id });
+            }
+
+            return inquirer.prompt([{
+                name: "title",
+                type: "input",
+                message: "What is the name of the role? "
             },
-                (err, res) => {
-                    if (err) throw err;
-                    console.log('Added' + JSON.stringify(res) + 'to the database');
-                    initQuestions();
+            {
+                name: "salary",
+                type: "input",
+                message: "What is the salary of the role? "
+            },
+            {
+                name: "department",
+                type: "list",
+                message: "Which department does the role belong to? ",
+                choices: dep
+            }])
+        })
+        .then((res) => {
+            proc.addRole(res.title, res.salary, res.department);
+            console.log('Added role ' + res.title + ' to the database');
+            init()
+        })
+        .catch((err) => { throw (err) });
+}
+
+function addEmployee() {
+    Promise.all([proc.getRoles(), proc.getManagers()])
+        .then((lists) => {
+
+            let roleList = lists[0].map(r => r.title);
+            let managers = lists[1].map(m => m.first_name + " " + m.last_name).sort();
+
+            inquirer.prompt([
+                {
+                    type: "input",
+                    message: "What is the employee's first name?",
+                    name: "firstName"
+                },
+                {
+                    type: "input",
+                    message: "What is the employee's last name?",
+                    name: "lastName"
+                },
+                {
+                    type: "list",
+                    message: "What is the employee's role?",
+                    name: "employeeRole",
+                    choices: roleList
+                },
+                {
+                    type: "list",
+                    message: "Who is the employee's manager?",
+                    name: "employeeManager",
+                    choices: [...managers, 'None']
+                },
+            ])
+                .then(res => {
+                    let selectedRole = res.employeeRole;
+                    let selectedManager = res.employeeManager;
+
+                    let roleIndexNumber = lists[0].findIndex(function (role) {
+                        return selectedRole === role.title;
+                    })
+
+                    let roleID = lists[0][roleIndexNumber].id;
+
+                    let managerIndexNumber = lists[1].findIndex(function (manager) {
+                        return selectedManager === manager.first_name + " " + manager.last_name;
+                    })
+
+                    let managerID = (managerIndexNumber === -1) ? null : lists[1][managerIndexNumber].id;
+
+                    proc.addEmployee(res.firstName, res.lastName, roleID, managerID).then(res => { init() }).catch(err => { console.log(err) });
+
+                    console.log('Added employee ' + res.firstName + ' ' + res.lastName + ' to the database');
+                })
+        })
+        .catch(err =>
+            console.log(err));
+}
+
+function updateEmployee() {
+    Promise.all([proc.getEmployees, proc.getRoles])
+        .then((values) => {
+
+            let currentEmployees = values[0].map(function (employee) {
+                return employee.first_name + " " + employee.last_name;
+            })
+
+            let currentRoles = values[1].map(function (employee) {
+                return employee.title;
+            })
+            inquirer.prompt([
+                {
+                    type: "list",
+                    message: "Which employee's role do you want to update? ",
+                    name: "employeeName",
+                    choices: currentEmployees
+                },
+                {
+                    type: "list",
+                    message: "Which role do you want to assign the selected employee? ",
+                    name: "selectRole",
+                    choices: currentRoles
+                }
+                ])
+                .then(res => {
+                    let selectedEmployee = res.employeeName;
+                    let selectedRole = res.selectRole;
+                    let employeeIndexNumber = values[0].findIndex(function (employee) {
+                        return selectedEmployee === employee.first_name + " " + employee.last_name;
+                    })
+
+                    let thisEmployeeId = values[0][employeeIndexNumber].id;
+
+                    let roleIndexNumber = values[1].findIndex(function (role) {
+                        return selectedRole === role.title;
+                    })
+
+                    let roleID = values[1][roleIndexNumber].id;
+
+                    db.query(`UPDATE employee SET role_id = ? WHERE id= ?`, [roleID, thisEmployeeId], (err, res) => {
+                        console.log("Updated" + selectedEmployee + "'s role")
+                        init();
+                    })
                 })
         })
 }
 
-const deleteDepartment = () => {
+function deleteDepartment() {
     let depOpt = [];
     db.query("SELECT id, name FROM department", (err, res) => {
         for (var i = 0; i < res.length; i++) {
@@ -71,7 +209,7 @@ const deleteDepartment = () => {
             {
                 type: 'list',
                 name: 'delDep',
-                message: 'What is the name of the department? ',
+                message: 'Select a department to delete ',
                 choices: function () {
                     var choiceArray = [];
                     for (var i = 0; i < depOpt.length; i++) {
@@ -90,13 +228,72 @@ const deleteDepartment = () => {
                         console.log("Department: " + res.delDep + " Deleted Succesfully");
                     }
                 }
-                initQuestions();
+                init();
             })
     })
 }
 
+function deleteRole() {
+    let roleOpt = [];
+    db.query("SELECT id, title FROM role", (err, res) => {
+        for (var i = 0; i < res.length; i++) {
+            roleOpt.push(Object(res[i]));
+        }
+        console.table(res);
+
+        inquirer.prompt(
+            {
+                type: 'list',
+                name: 'delRole',
+                message: 'Select a role to delete ',
+                choices: roleOpt.map(r => r.title),
+            })
+            .then((res) => {
+                for (i = 0; i < roleOpt.length; i++) {
+                    if (res.delRole === roleOpt[i].title) {
+                        newChoice = roleOpt[i].id
+                        db.query(`DELETE FROM role Where id = ${newChoice}`), (err, res) => {
+                            if (err) throw err;
+                        };
+                        console.log("Role: " + res.delRole + " Deleted Succesfully");
+                    }
+                }
+                init();
+            })
+    })
+}
+
+function deleteEmployee() {
+    let empList = [];
+    db.query("SELECT id, first_name, last_name FROM employee", (err, res) => {
+        empList = res;
+        console.table(res);
+
+        inquirer
+            .prompt([
+                {
+                    type: "list",
+                    message: "Which employee would you like to delete?",
+                    name: "employee",
+                    choices: empList.map(r => r.first_name + " " + r.last_name),
+
+                },
+            ])
+            .then((res) => {
+                empId = empList.find(e => e.first_name + " " + e.last_name === res.employee).id;
+                console.log(empId);
+                db.query(`DELETE FROM employee WHERE id = ${empId}`, (err, res) => {
+                    if (err) throw err;
+                    init();
+                });
+                console.log("Employee: " + res.employee + " deleted Succesfully");
+            });
+    }
+    );
+};
+
 // Initial questions to ask
-const initQuestions = () => {
+function init() {
     inquirer.prompt([
         {
             type: 'list',
@@ -111,7 +308,9 @@ const initQuestions = () => {
                 'Add Employee',
                 'Update Employee Role',
                 'Quit',
-                'Delete Department'
+                'Delete Department',
+                'Delete Role',
+                'Delete Employee'
             ]
         }
     ])
@@ -130,22 +329,28 @@ const initQuestions = () => {
                     addDepartment();
                     break;
                 case 'Add Role':
-
+                    addRole();
                     break;
                 case 'Add Employee':
-
+                    addEmployee();
                     break;
                 case 'Update Employee Role':
-
+                    updateEmployee();
                     break;
                 case 'Quit':
                     process.exit();
                 case 'Delete Department':
                     deleteDepartment();
                     break;
+                case 'Delete Role':
+                    deleteRole();
+                    break;
+                case 'Delete Employee':
+                    deleteEmployee();
+                    break;
             }
         })
 
 }
 
-initQuestions();
+init();
