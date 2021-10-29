@@ -73,15 +73,23 @@ module.exports = {
             })
         })
     },
-    deleteDepartment: function() {
-
-    },
-    deleteRole: function() {
-
-    },
-    deleteEmployee: function(id) {
+    deleteDepartment: function(newChoice) {
         return new Promise((resolve, reject) => {
-            db.query(`DELETE FROM employee WHERE id = ?`, [id], (err, res) => {
+            db.query(`DELETE FROM department Where id = ${newChoice}`, (err, res) => {
+                err && reject(err) || resolve(res);
+            })
+        })
+    },
+    deleteRole: function(newChoice) {
+        return new Promise((resolve, reject) => {
+            db.query(`DELETE FROM role Where id = ${newChoice}`, (err, res) => {
+                err && reject(err) || resolve(res);
+            })
+        })
+    },
+    deleteEmployee: function(empId) {
+        return new Promise((resolve, reject) => {
+            db.query(`DELETE FROM employee WHERE id = ?`, [empId], (err, res) => {
                 err && reject(err) || resolve(res);
             })
         })

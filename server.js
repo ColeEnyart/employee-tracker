@@ -18,9 +18,7 @@ const db = mysql.createConnection(
 function viewDepartments() {
     proc.getDepartments()
         .then((res) => {
-            console.table(res.sort((a, b) => {
-                return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
-            }));
+            console.table(res);
             init();
         })
         .catch((err) => { throw err })
@@ -141,7 +139,6 @@ function addEmployee() {
                     let managerID = (managerIndexNumber === -1) ? null : lists[1][managerIndexNumber].id;
 
                     proc.addEmployee(res.firstName, res.lastName, roleID, managerID).then(res => { init() }).catch(err => { console.log(err) });
-
                     console.log('Added employee ' + res.firstName + ' ' + res.lastName + ' to the database');
                 })
         })
@@ -222,13 +219,11 @@ function deleteDepartment() {
                 for (i = 0; i < depOpt.length; i++) {
                     if (res.delDep === depOpt[i].name) {
                         newChoice = depOpt[i].id
-                        db.query(`DELETE FROM department Where id = ${newChoice}`), (err, res) => {
-                            if (err) throw err;
-                        };
+                        
+                        proc.deleteDepartment(newChoice).then(res => { init() }).catch(err => { console.log(err) });
                         console.log("Department: " + res.delDep + " Deleted Succesfully");
                     }
                 }
-                init();
             })
     })
 }
@@ -252,9 +247,8 @@ function deleteRole() {
                 for (i = 0; i < roleOpt.length; i++) {
                     if (res.delRole === roleOpt[i].title) {
                         newChoice = roleOpt[i].id
-                        db.query(`DELETE FROM role Where id = ${newChoice}`), (err, res) => {
-                            if (err) throw err;
-                        };
+                        
+                        proc.deleteRole(newChoice).then(res => { init() }).catch(err => { console.log(err) });
                         console.log("Role: " + res.delRole + " Deleted Succesfully");
                     }
                 }
@@ -281,11 +275,8 @@ function deleteEmployee() {
             ])
             .then((res) => {
                 empId = empList.find(e => e.first_name + " " + e.last_name === res.employee).id;
-                console.log(empId);
-                db.query(`DELETE FROM employee WHERE id = ${empId}`, (err, res) => {
-                    if (err) throw err;
-                    init();
-                });
+                
+                proc.deleteEmployee(empId).then(res => { init() }).catch(err => { console.log(err) });
                 console.log("Employee: " + res.employee + " deleted Succesfully");
             });
     }
