@@ -147,9 +147,9 @@ function addEmployee() {
 }
 
 function updateEmployee() {
-    Promise.all([proc.getEmployees, proc.getRoles])
+    Promise.all([proc.getEmployees(), proc.getRoles()])
         .then((values) => {
-
+            
             let currentEmployees = values[0].map(function (employee) {
                 return employee.first_name + " " + employee.last_name;
             })
