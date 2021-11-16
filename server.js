@@ -188,7 +188,6 @@ function updateEmployee() {
 
                     db.query(`UPDATE employee SET role_id = ? WHERE id= ?`, [roleID, thisEmployeeId], (err, res) => {
                         console.log("Updated " + selectedEmployee + "'s role")
-                        console.log(roleID, thisEmployeeId, employeeIndexNumber, values[1][employeeIndexNumber].id)
                         init();
                     })
                 })
