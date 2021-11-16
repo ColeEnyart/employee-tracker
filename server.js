@@ -178,7 +178,7 @@ function updateEmployee() {
                         return selectedEmployee === employee.first_name + " " + employee.last_name;
                     })
 
-                    let thisEmployeeId = values[0][employeeIndexNumber].id;
+                    let thisEmployeeId = values[1][employeeIndexNumber].id;
 
                     let roleIndexNumber = values[1].findIndex(function (role) {
                         return selectedRole === role.title;
@@ -187,7 +187,8 @@ function updateEmployee() {
                     let roleID = values[1][roleIndexNumber].id;
 
                     db.query(`UPDATE employee SET role_id = ? WHERE id= ?`, [roleID, thisEmployeeId], (err, res) => {
-                        console.log("Updated" + selectedEmployee + "'s role")
+                        console.log("Updated " + selectedEmployee + "'s role")
+                        console.log(roleID, thisEmployeeId, employeeIndexNumber, values[1][employeeIndexNumber].id)
                         init();
                     })
                 })
